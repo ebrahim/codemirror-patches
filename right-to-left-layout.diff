@@ -2,9 +2,9 @@
 # Parent 5ac5a672256898798f1533c716987a8e46e41be3
 Initial commit of right-to-left layout patch
 
-diff -r 5ac5a6722568 -r 83230ae6a52c lib/codemirror.css
+diff -r 5ac5a6722568 lib/codemirror.css
 --- a/lib/codemirror.css	Wed May 11 07:17:47 2011 +0200
-+++ b/lib/codemirror.css	Thu May 12 23:02:52 2011 +0430
++++ b/lib/codemirror.css	Sat May 14 01:38:35 2011 +0430
 @@ -6,15 +6,15 @@
  }
  
@@ -33,58 +33,18 @@ diff -r 5ac5a6722568 -r 83230ae6a52c lib/codemirror.css
  }
  .CodeMirror-focused .CodeMirror-cursor {
    visibility: visible;
-diff -r 5ac5a6722568 -r 83230ae6a52c lib/codemirror.js
+diff -r 5ac5a6722568 lib/codemirror.js
 --- a/lib/codemirror.js	Wed May 11 07:17:47 2011 +0200
-+++ b/lib/codemirror.js	Thu May 12 23:02:52 2011 +0430
-@@ -27,7 +27,7 @@
-         '<div style="position: absolute; height: 0; width: 0; overflow: hidden;"></div>' +
-         '<div style="position: relative">' + // Moved around its parent to cover visible view
-           '<div class="CodeMirror-gutter"><div class="CodeMirror-gutter-text"></div></div>' +
--          '<div style="overflow: hidden; position: absolute; width: 1px; height: 0; left: 0">' + // Wraps and hides input textarea
-+          '<div style="overflow: hidden; position: absolute; width: 1px; height: 0; right: 0">' + // Wraps and hides input textarea
-             '<textarea style="position: absolute; width: 100000px;" wrap="off"></textarea></div>' +
-           // Provides positioning relative to (visible) text origin
-           '<div class="CodeMirror-lines"><div style="position: relative">' +
-@@ -139,7 +139,7 @@
-       coordsChar: function(coords) {
-         var off = eltOffset(lineSpace);
-         var line = clipLine(Math.min(lines.length - 1, showingFrom + Math.floor((coords.y - off.top) / lineHeight())));
--        return clipPos({line: line, ch: charFromX(clipLine(line), coords.x - off.left)});
-+        return clipPos({line: line, ch: charFromX(clipLine(line), coords.x - off.right)});
-       },
-       getSearchCursor: function(query, pos, caseFold) {return new SearchCursor(query, pos, caseFold);},
-       markText: operation(function(a, b, c){return operation(markText(a, b, c));}),
++++ b/lib/codemirror.js	Sat May 14 01:38:35 2011 +0430
 @@ -150,7 +150,7 @@
        addWidget: function(pos, node, scroll) {
          var pos = localCoords(clipPos(pos), true);
          node.style.top = (showingFrom * lineHeight() + pos.yBot + paddingTop()) + "px";
 -        node.style.left = (pos.x + paddingLeft()) + "px";
-+        node.style.right = (pos.x + paddingRight()) + "px";
++        node.style.right = (pos.x + paddingLeft()) + "px";
          code.appendChild(node);
          if (scroll)
            scrollIntoView(pos.x, pos.yBot, pos.x + node.offsetWidth, pos.yBot + node.offsetHeight);
-@@ -620,16 +620,16 @@
-       return scrollIntoView(cursor.x, cursor.y, cursor.x, cursor.yBot);
-     }
-     function scrollIntoView(x1, y1, x2, y2) {
--      var pl = paddingLeft(), pt = paddingTop(), lh = lineHeight();
-+      var pl = paddingRight(), pt = paddingTop(), lh = lineHeight();
-       y1 += pt; y2 += pt; x1 += pl; x2 += pl;
-       var screen = wrapper.clientHeight, screentop = wrapper.scrollTop, scrolled = false, result = true;
-       if (y1 < screentop) {wrapper.scrollTop = Math.max(0, y1 - 2*lh); scrolled = true;}
-       else if (y2 > screentop + screen) {wrapper.scrollTop = y2 + lh - screen; scrolled = true;}
- 
--      var screenw = wrapper.clientWidth, screenleft = wrapper.scrollLeft;
--      if (x1 < screenleft) {wrapper.scrollLeft = Math.max(0, x1 - 10); scrolled = true;}
--      else if (x2 > screenw + screenleft) {
--        wrapper.scrollLeft = x2 + 10 - screenw;
-+      var screenw = wrapper.clientWidth, screenright = wrapper.scrollRight;
-+      if (x1 < screenright) {wrapper.scrollRight = Math.max(0, x1 - 10); scrolled = true;}
-+      else if (x2 > screenw + screenright) {
-+        wrapper.scrollRight = x2 + 10 - screenw;
-         scrolled = true;
-         if (x2 > code.clientWidth) result = false;
-       }
 @@ -808,14 +808,14 @@
        while (val.length + pad.length < minwidth) pad += "\u00a0";
        if (pad) firstNode.insertBefore(targetDocument.createTextNode(pad), firstNode.firstChild);
@@ -111,37 +71,6 @@ diff -r 5ac5a6722568 -r 83230ae6a52c lib/codemirror.js
      }
  
      function markText(from, to, className) {
-@@ -1091,7 +1091,7 @@
-     }
-     function pageCoords(pos) {
-       var local = localCoords(pos, true), off = eltOffset(lineSpace);
--      return {x: off.left + local.x, y: off.top + local.y, yBot: off.top + local.yBot};
-+      return {x: off.right + local.x, y: off.top + local.y, yBot: off.top + local.yBot};
-     }
- 
-     function lineHeight() {
-@@ -1101,18 +1101,18 @@
-       return measure.firstChild.offsetHeight || 1;
-     }
-     function paddingTop() {return lineSpace.offsetTop;}
--    function paddingLeft() {return lineSpace.offsetLeft;}
-+    function paddingRight() {return lineSpace.offsetRight;}
- 
-     function posFromMouse(e, liberal) {
-       var offW = eltOffset(wrapper), x = e.pageX(), y = e.pageY();
-       // This is a mess of a heuristic to try and determine whether a
-       // scroll-bar was clicked or not, and to return null if one was
-       // (and !liberal).
--      if (!liberal && (x - offW.left > wrapper.clientWidth || y - offW.top > wrapper.clientHeight))
-+      if (!liberal && (x - offW.right > wrapper.clientWidth || y - offW.top > wrapper.clientHeight))
-         return null;
-       var offL = eltOffset(lineSpace);
-       var line = showingFrom + Math.floor((y - offL.top) / lineHeight());
--      return clipPos({line: line, ch: charFromX(clipLine(line), x - offL.left)});
-+      return clipPos({line: line, ch: charFromX(clipLine(line), x - offL.right)});
-     }
-     function onContextMenu(e) {
-       var pos = posFromMouse(e);
 @@ -1122,7 +1122,7 @@
  
        var oldCSS = input.style.cssText;
@@ -151,25 +80,15 @@ diff -r 5ac5a6722568 -r 83230ae6a52c lib/codemirror.js
          "border-width: 0; outline: none; overflow: hidden;";
        var val = input.value = getSelection();
        input.focus();
-@@ -1807,7 +1807,7 @@
+@@ -1805,9 +1805,9 @@
+       else if (this.e.button & 4) return 2;
+     },
      pageX: function() {
-       if (this.e.pageX != null) return this.e.pageX;
+-      if (this.e.pageX != null) return this.e.pageX;
        var doc = this.target().ownerDocument;
 -      return this.e.clientX + doc.body.scrollLeft + doc.documentElement.scrollLeft;
-+      return this.e.clientX + doc.body.scrollRight + doc.documentElement.scrollRight;
++      if (this.e.pageX != null) return doc.body.clientWidth - this.e.pageX;
++      return doc.body.clientWidth - this.e.clientX - doc.body.scrollLeft - doc.documentElement.scrollLeft;
      },
      pageY: function() {
        if (this.e.pageY != null) return this.e.pageY;
-@@ -1873,9 +1873,9 @@
-   // Find the position of an element by following the offsetParent chain.
-   function eltOffset(node) {
-     var x = 0, y = 0;
--    for (var n = node; n; n = n.offsetParent) {x += n.offsetLeft; y += n.offsetTop;}
--    for (var n = node.parentNode; n != node.ownerDocument.body; n = n.parentNode) {x -= n.scrollLeft; y -= n.scrollTop;}
--    return {left: x, top: y};
-+    for (var n = node; n; n = n.offsetParent) {x += n.offsetRight; y += n.offsetTop;}
-+    for (var n = node.parentNode; n != node.ownerDocument.body; n = n.parentNode) {x -= n.scrollRight; y -= n.scrollTop;}
-+    return {right: x, top: y};
-   }
-   // Get a node's text content.
-   function eltText(node) {
